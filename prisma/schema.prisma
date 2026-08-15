@@ -1,0 +1,88 @@
+// Prisma schema for the flashcard application.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Category {
+  UNCATEGORISED
+  RED
+  AMBER
+  GREEN
+  BLUE
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  decks        Deck[]
+}
+
+model Deck {
+  id         String      @id @default(cuid())
+  userId     String
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  language   String      @default("en")
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  notes      Note[]
+  cards      Card[]
+  audioFiles AudioFile[]
+
+  @@index([userId])
+}
+
+// A Note is the raw imported record with flexible fields (Word, Sentence, Meaning, ...)
+model Note {
+  id        String   @id @default(cuid())
+  deckId    String
+  deck      Deck     @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  // JSON object of field name -> value, serialized as a string (SQLite has no Json type).
+  fields    String   @default("{}")
+  cards     Card[]
+  createdAt DateTime @default(now())
+
+  @@index([deckId])
+}
+
+// A Card is a Note mapped onto front/back, reviewed via categories.
+model Card {
+  id        String    @id @default(cuid())
+  noteId    String
+  note      Note      @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  deckId    String
+  deck      Deck      @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  front     String
+  back      String
+  category  Category  @default(UNCATEGORISED)
+  audioId   String?
+  audio     AudioFile? @relation(fields: [audioId], references: [id], onDelete: SetNull)
+  createdAt DateTime  @default(now())
+
+  @@index([deckId])
+  @@index([category])
+}
+
+// Cached TTS audio, deduplicated per deck by text+language.
+model AudioFile {
+  id        String   @id @default(cuid())
+  deckId    String
+  deck      Deck     @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  text      String
+  language  String
+  mimeType  String   @default("audio/mpeg")
+  data      Bytes
+  createdAt DateTime @default(now())
+  cards     Card[]
+
+  @@unique([deckId, text, language])
+  @@index([deckId])
+}
