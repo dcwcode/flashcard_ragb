@@ -47,7 +47,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <h1 className="text-2xl font-semibold">Create account</h1>
-          <p className="text-sm text-gray-500 mt-1">to start building your decks</p>
+          <p className="text-sm text-black mt-1">to start building your decks</p>
         </div>
 
         <form onSubmit={onSubmit} className="space-y-4">
@@ -109,7 +109,7 @@ export default function RegisterPage() {
           </button>
         </form>
 
-        <p className="text-center text-sm text-gray-500">
+        <p className="text-center text-sm text-black">
           Already have an account?{" "}
           <Link href="/login" className="text-blue-600 hover:underline">
             Sign in
