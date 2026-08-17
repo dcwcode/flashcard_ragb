@@ -21,15 +21,29 @@ export function ReviewDeck({ cards }: { cards: ReviewCard[] }) {
   const [generating, setGenerating] = useState(false);
   const [audioError, setAudioError] = useState("");
   const [listening, setListening] = useState(true);
+  const [shuffle, setShuffle] = useState(false);
+  const [reverse, setReverse] = useState(false);
+  const [order, setOrder] = useState<ReviewCard[]>(cards);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  const card = cards[index];
+  const card = order[index];
   const audioId = card ? audioMap[card.id] ?? card.audioId : null;
 
   useEffect(() => {
-    const stored = localStorage.getItem("listening-mode");
-    if (stored !== null) setListening(stored === "1");
-  }, []);
+    const storedListening = localStorage.getItem("listening-mode");
+    if (storedListening !== null) setListening(storedListening === "1");
+
+    const storedShuffle = localStorage.getItem("shuffle-mode") === "1";
+    const storedReverse = localStorage.getItem("reverse-mode") === "1";
+    setShuffle(storedShuffle);
+    setReverse(storedReverse);
+    if (storedShuffle || storedReverse) {
+      let next = [...cards];
+      if (storedShuffle) next = shuffleArray(next);
+      if (storedReverse) next = [...next].reverse();
+      setOrder(next);
+    }
+  }, [cards]);
 
   useEffect(() => {
     const el = audioRef.current;
@@ -38,12 +52,42 @@ export function ReviewDeck({ cards }: { cards: ReviewCard[] }) {
     }
   }, [index, audioId]);
 
+  function resetToStart() {
+    setIndex(0);
+    setFlipped(false);
+    setFinished(false);
+    setAudioError("");
+  }
+
+  function applyOrder(shuffled: boolean, reversed: boolean) {
+    let next = [...cards];
+    if (shuffled) next = shuffleArray(next);
+    if (reversed) next = [...next].reverse();
+    setOrder(next);
+  }
+
   function toggleListening() {
     setListening((value) => {
       const next = !value;
       localStorage.setItem("listening-mode", next ? "1" : "0");
       return next;
     });
+  }
+
+  function toggleShuffle() {
+    const next = !shuffle;
+    setShuffle(next);
+    localStorage.setItem("shuffle-mode", next ? "1" : "0");
+    applyOrder(next, reverse);
+    resetToStart();
+  }
+
+  function toggleReverse() {
+    const next = !reverse;
+    setReverse(next);
+    localStorage.setItem("reverse-mode", next ? "1" : "0");
+    applyOrder(shuffle, next);
+    resetToStart();
   }
 
   async function generateAudio() {
@@ -77,7 +121,7 @@ export function ReviewDeck({ cards }: { cards: ReviewCard[] }) {
 
     setSaving(false);
 
-    if (index + 1 >= cards.length) {
+    if (index + 1 >= order.length) {
       setFinished(true);
     } else {
       setIndex((i) => i + 1);
@@ -90,7 +134,7 @@ export function ReviewDeck({ cards }: { cards: ReviewCard[] }) {
     return (
       <div className="text-center py-16 space-y-4">
         <h2 className="text-xl font-semibold">All done!</h2>
-        <p className="text-gray-500">You reviewed {cards.length} cards.</p>
+        <p className="text-gray-500">You reviewed {order.length} cards.</p>
         <button
           onClick={() => {
             setIndex(0);
@@ -113,10 +157,28 @@ export function ReviewDeck({ cards }: { cards: ReviewCard[] }) {
     <div className="space-y-6">
       <div className="flex items-center justify-between text-sm text-gray-500">
         <span>
-          Card {index + 1} of {cards.length}
+          Card {index + 1} of {order.length}
         </span>
         <div className="flex items-center gap-4">
           <span>{card.category !== "UNCATEGORISED" ? "Reviewing" : "New"}</span>
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={shuffle}
+              onChange={toggleShuffle}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            <span>Shuffle</span>
+          </label>
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={reverse}
+              onChange={toggleReverse}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            <span>Reverse</span>
+          </label>
           <label className="flex items-center gap-1.5 cursor-pointer">
             <input
               type="checkbox"
@@ -234,6 +296,15 @@ export function ReviewDeck({ cards }: { cards: ReviewCard[] }) {
       )}
     </div>
   );
+}
+
+function shuffleArray<T>(array: T[]): T[] {
+  const a = [...array];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
 function categoryColor(category: CategoryValue): string {
