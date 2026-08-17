@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { languageLabel } from "@/lib/languages";
 import { DeckActions } from "@/components/deck-actions";
-import { CategoryBadge } from "@/components/category-badge";
+import { DeckCards } from "@/components/deck-cards";
 
 export default async function DeckDetailPage({
   params,
@@ -64,22 +64,16 @@ export default async function DeckDetailPage({
           No cards yet. Import a CSV to get started.
         </p>
       ) : (
-        <ul className="divide-y divide-gray-200 rounded-lg border border-gray-200">
-          {deck.cards.map((card) => (
-            <li key={card.id} className="px-4 py-3 flex items-center justify-between gap-4">
-              <div className="min-w-0">
-                <p className="font-medium truncate">{card.front}</p>
-                <p className="text-sm text-gray-500 truncate">{card.back}</p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                {card.audio && (
-                  <span className="text-xs text-gray-400">🔊</span>
-                )}
-                <CategoryBadge category={card.category} />
-              </div>
-            </li>
-          ))}
-        </ul>
+        <DeckCards
+          deckId={deck.id}
+          cards={deck.cards.map((card) => ({
+            id: card.id,
+            front: card.front,
+            back: card.back,
+            category: card.category,
+            hasAudio: Boolean(card.audio),
+          }))}
+        />
       )}
     </div>
   );

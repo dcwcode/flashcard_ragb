@@ -138,14 +138,14 @@ export function ReviewDeck({ cards }: { cards: ReviewCard[] }) {
             <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">
               Front
             </p>
-            <p className="text-3xl font-semibold break-words">{card.front}</p>
+            <p className="text-3xl font-semibold break-words text-gray-900">{card.front}</p>
           </div>
         ) : (
           <div>
             <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">
               Back
             </p>
-            <p className="text-2xl text-gray-800 break-words">{card.back}</p>
+            <p className="text-2xl text-gray-900 break-words">{card.back}</p>
           </div>
         )}
       </button>
