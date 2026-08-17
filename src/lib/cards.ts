@@ -1,5 +1,13 @@
 import { prisma } from "@/lib/prisma";
 
+// Deletes an audio file if no cards reference it anymore.
+export async function deleteAudioIfOrphaned(audioId: string) {
+  const remaining = await prisma.card.count({ where: { audioId } });
+  if (remaining === 0) {
+    await prisma.audioFile.delete({ where: { id: audioId } });
+  }
+}
+
 // Deletes a card and cleans up any now-orphaned note and audio file.
 export async function deleteCardWithCleanup(cardId: string) {
   const card = await prisma.card.findUnique({
@@ -20,11 +28,6 @@ export async function deleteCardWithCleanup(cardId: string) {
   }
 
   if (card.audioId) {
-    const remainingAudio = await prisma.card.count({
-      where: { audioId: card.audioId },
-    });
-    if (remainingAudio === 0) {
-      await prisma.audioFile.delete({ where: { id: card.audioId } });
-    }
+    await deleteAudioIfOrphaned(card.audioId);
   }
 }

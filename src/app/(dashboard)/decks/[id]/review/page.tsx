@@ -13,7 +13,7 @@ export default async function ReviewPage({
   searchParams,
 }: {
   params: { id: string };
-  searchParams: { category?: string };
+  searchParams: { category?: string; ids?: string };
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -23,11 +23,18 @@ export default async function ReviewPage({
   });
   if (!deck) notFound();
 
+  const selectedIds = (searchParams.ids ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
   const filter = searchParams.category ?? "ALL";
   const where =
-    filter === "ALL" || !VALID_FILTERS.has(filter)
-      ? { deckId: deck.id }
-      : { deckId: deck.id, category: filter as Category };
+    selectedIds.length > 0
+      ? { deckId: deck.id, id: { in: selectedIds } }
+      : filter === "ALL" || !VALID_FILTERS.has(filter)
+        ? { deckId: deck.id }
+        : { deckId: deck.id, category: filter as Category };
 
   const cards = await prisma.card.findMany({
     where,
@@ -59,23 +66,29 @@ export default async function ReviewPage({
         <h1 className="text-2xl font-semibold mt-2">Review · {deck.name}</h1>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <FilterLink
-          deckId={deck.id}
-          value="ALL"
-          label={`All (${cardsTotal(countMap)})`}
-          active={filter === "ALL"}
-        />
-        {CATEGORIES.map((c) => (
+      {selectedIds.length > 0 ? (
+        <p className="text-sm text-gray-500">
+          Reviewing {cards.length} selected card{cards.length === 1 ? "" : "s"}.
+        </p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
           <FilterLink
-            key={c.value}
             deckId={deck.id}
-            value={c.value}
-            label={`${c.label} (${countMap[c.value] ?? 0})`}
-            active={filter === c.value}
+            value="ALL"
+            label={`All (${cardsTotal(countMap)})`}
+            active={filter === "ALL"}
           />
-        ))}
-      </div>
+          {CATEGORIES.map((c) => (
+            <FilterLink
+              key={c.value}
+              deckId={deck.id}
+              value={c.value}
+              label={`${c.label} (${countMap[c.value] ?? 0})`}
+              active={filter === c.value}
+            />
+          ))}
+        </div>
+      )}
 
       <ReviewDeck cards={cards} />
     </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CategoryValue, CATEGORIES } from "@/lib/categories";
+import { CardText } from "@/components/card-text";
 
 interface ReviewCard {
   id: string;
@@ -19,10 +20,16 @@ export function ReviewDeck({ cards }: { cards: ReviewCard[] }) {
   const [audioMap, setAudioMap] = useState<Record<string, string>>({});
   const [generating, setGenerating] = useState(false);
   const [audioError, setAudioError] = useState("");
+  const [listening, setListening] = useState(true);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const card = cards[index];
   const audioId = card ? audioMap[card.id] ?? card.audioId : null;
+
+  useEffect(() => {
+    const stored = localStorage.getItem("listening-mode");
+    if (stored !== null) setListening(stored === "1");
+  }, []);
 
   useEffect(() => {
     const el = audioRef.current;
@@ -30,6 +37,14 @@ export function ReviewDeck({ cards }: { cards: ReviewCard[] }) {
       el.play().catch(() => {});
     }
   }, [index, audioId]);
+
+  function toggleListening() {
+    setListening((value) => {
+      const next = !value;
+      localStorage.setItem("listening-mode", next ? "1" : "0");
+      return next;
+    });
+  }
 
   async function generateAudio() {
     if (!card || generating) return;
@@ -100,7 +115,18 @@ export function ReviewDeck({ cards }: { cards: ReviewCard[] }) {
         <span>
           Card {index + 1} of {cards.length}
         </span>
-        <span>{card.category !== "UNCATEGORISED" ? "Reviewing" : "New"}</span>
+        <div className="flex items-center gap-4">
+          <span>{card.category !== "UNCATEGORISED" ? "Reviewing" : "New"}</span>
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={listening}
+              onChange={toggleListening}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            <span>Listening mode</span>
+          </label>
+        </div>
       </div>
 
       <div className="flex items-center justify-center min-h-12">
@@ -138,14 +164,37 @@ export function ReviewDeck({ cards }: { cards: ReviewCard[] }) {
             <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">
               Front
             </p>
-            <p className="text-3xl font-semibold break-words text-gray-900">{card.front}</p>
+            {listening ? (
+              <p className="text-4xl text-gray-300">🔊</p>
+            ) : (
+              <CardText
+                text={card.front}
+                className="block text-3xl font-semibold text-gray-900"
+              />
+            )}
           </div>
         ) : (
           <div>
             <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">
               Back
             </p>
-            <p className="text-2xl text-gray-900 break-words">{card.back}</p>
+            {listening ? (
+              <div className="space-y-3">
+                <CardText
+                  text={card.front}
+                  className="block text-2xl font-semibold text-gray-900"
+                />
+                <CardText
+                  text={card.back}
+                  className="block text-xl text-gray-800"
+                />
+              </div>
+            ) : (
+              <CardText
+                text={card.back}
+                className="block text-2xl text-gray-900"
+              />
+            )}
           </div>
         )}
       </button>
