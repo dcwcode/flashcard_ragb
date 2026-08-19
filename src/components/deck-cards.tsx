@@ -11,14 +11,17 @@ export interface DeckCard {
   back: string;
   category: string;
   hasAudio: boolean;
+  fields: Record<string, string>;
 }
 
 export function DeckCards({
   deckId,
   cards,
+  columns,
 }: {
   deckId: string;
   cards: DeckCard[];
+  columns: string[];
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -26,8 +29,7 @@ export function DeckCards({
   const [bulkCategory, setBulkCategory] = useState("");
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editFront, setEditFront] = useState("");
-  const [editBack, setEditBack] = useState("");
+  const [editFields, setEditFields] = useState<Record<string, string>>({});
 
   const allSelected = cards.length > 0 && selected.size === cards.length;
 
@@ -89,8 +91,13 @@ export function DeckCards({
 
   function startEdit(card: DeckCard) {
     setEditingId(card.id);
-    setEditFront(card.front);
-    setEditBack(card.back);
+    const fields: Record<string, string> = {};
+    for (const col of columns) {
+      fields[col] =
+        card.fields[col] ??
+        (col === "front" ? card.front : col === "back" ? card.back : "");
+    }
+    setEditFields(fields);
   }
 
   async function saveEdit(id: string) {
@@ -98,7 +105,7 @@ export function DeckCards({
     await fetch(`/api/cards/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ front: editFront, back: editBack }),
+      body: JSON.stringify({ fields: editFields }),
     });
     setBusy(false);
     setEditingId(null);
@@ -161,24 +168,19 @@ export function DeckCards({
           <li key={card.id} className="px-4 py-3">
             {editingId === card.id ? (
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Front
-                  <textarea
-                    value={editFront}
-                    onChange={(e) => setEditFront(e.target.value)}
-                    rows={2}
-                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900"
-                  />
-                </label>
-                <label className="block text-sm font-medium text-gray-700">
-                  Back
-                  <textarea
-                    value={editBack}
-                    onChange={(e) => setEditBack(e.target.value)}
-                    rows={2}
-                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900"
-                  />
-                </label>
+                {columns.map((col) => (
+                  <label key={col} className="block text-sm font-medium text-gray-700">
+                    {col}
+                    <textarea
+                      value={editFields[col] ?? ""}
+                      onChange={(e) =>
+                        setEditFields((prev) => ({ ...prev, [col]: e.target.value }))
+                      }
+                      rows={2}
+                      className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                    />
+                  </label>
+                ))}
                 <div className="flex gap-2">
                   <button
                     onClick={() => saveEdit(card.id)}

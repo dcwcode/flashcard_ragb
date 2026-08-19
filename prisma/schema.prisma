@@ -31,6 +31,10 @@ model Deck {
   user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   name       String
   language   String      @default("en")
+  // Ordered field names from the CSV import, serialized JSON array (e.g. ["Word","Sentence","Meaning"]).
+  columns    String      @default("[]")
+  // Which field names map to the front/back, serialized JSON (e.g. {"front":["Word"],"back":["Sentence","Meaning"]}).
+  mapping    String      @default("{\"front\":[],\"back\":[]}")
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
   notes      Note[]

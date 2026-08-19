@@ -57,3 +57,13 @@ export function categoryLabel(value: string): string {
   const found = CATEGORIES.find((c) => c.value === value);
   return found?.label ?? value;
 }
+
+// Parse a category from either an enum value ("RED") or a label ("Red"),
+// case-insensitive. Returns null when unrecognised.
+export function normalizeCategory(input: string): CategoryValue | null {
+  const value = String(input ?? "").trim().toUpperCase();
+  const byValue = CATEGORIES.find((c) => c.value === value);
+  if (byValue) return byValue.value;
+  const byLabel = CATEGORIES.find((c) => c.label.toUpperCase() === value);
+  return byLabel ? byLabel.value : null;
+}

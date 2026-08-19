@@ -2,18 +2,13 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { ensureAudio } from "@/lib/audio";
+import { deriveFrontBack, FieldMap } from "@/lib/fields";
 
 interface ImportBody {
-  rows: string[][];
-  mapping: { front: number[]; back: number[] };
+  headers?: string[];
+  rows?: string[][];
+  mapping?: { front?: number[]; back?: number[] };
   generateAudio?: boolean;
-}
-
-function joinColumns(row: string[], indices: number[]): string {
-  return indices
-    .map((i) => (row[i] ?? "").trim())
-    .filter((v) => v.length > 0)
-    .join(" ");
 }
 
 async function mapLimit<T, R>(
@@ -57,44 +52,64 @@ export async function POST(
 
   const body = (await request.json().catch(() => ({}))) as ImportBody;
 
+  const headers = Array.isArray(body.headers)
+    ? body.headers.map((h) => String(h).trim()).filter(Boolean)
+    : [];
+
   if (!Array.isArray(body.rows) || body.rows.length === 0) {
     return NextResponse.json({ error: "No rows to import." }, { status: 400 });
   }
 
-  const front = Array.isArray(body.mapping?.front) ? body.mapping.front : [];
-  const back = Array.isArray(body.mapping?.back) ? body.mapping.back : [];
+  const frontIdx = Array.isArray(body.mapping?.front) ? body.mapping.front : [];
+  const backIdx = Array.isArray(body.mapping?.back) ? body.mapping.back : [];
 
-  if (front.length === 0 || back.length === 0) {
+  const frontNames = frontIdx
+    .map((i) => headers[i])
+    .filter((h): h is string => Boolean(h));
+  const backNames = backIdx
+    .map((i) => headers[i])
+    .filter((h): h is string => Boolean(h));
+
+  if (frontNames.length === 0 || backNames.length === 0) {
     return NextResponse.json(
       { error: "Select at least one column for both front and back." },
       { status: 400 }
     );
   }
 
+  const mapping = { front: frontNames, back: backNames };
+
+  // Record the deck's field schema and mapping.
+  await prisma.deck.update({
+    where: { id: deck.id },
+    data: {
+      columns: JSON.stringify(headers),
+      mapping: JSON.stringify(mapping),
+    },
+  });
+
   // Create notes + cards.
   const createdCards = await prisma.$transaction(async (tx) => {
     const created: { id: string; front: string }[] = [];
 
-    for (const row of body.rows) {
-      const frontText = joinColumns(row, front);
-      const backText = joinColumns(row, back);
+    for (const row of body.rows!) {
+      const fields: FieldMap = {};
+      headers.forEach((header, i) => {
+        fields[header] = row[i] ?? "";
+      });
 
-      if (!frontText || !backText) continue;
+      const { front, back } = deriveFrontBack(fields, mapping);
+      if (!front || !back) continue;
 
       const note = await tx.note.create({
-        data: { deckId: deck.id, fields: "{}" },
+        data: { deckId: deck.id, fields: JSON.stringify(fields) },
       });
 
       const card = await tx.card.create({
-        data: {
-          deckId: deck.id,
-          noteId: note.id,
-          front: frontText,
-          back: backText,
-        },
+        data: { deckId: deck.id, noteId: note.id, front, back },
       });
 
-      created.push({ id: card.id, front: frontText });
+      created.push({ id: card.id, front });
     }
 
     return created;

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { languageLabel } from "@/lib/languages";
 import { DeckActions } from "@/components/deck-actions";
 import { DeckCards } from "@/components/deck-cards";
+import { effectiveColumns, parseFields } from "@/lib/fields";
 
 export default async function DeckDetailPage({
   params,
@@ -19,12 +20,17 @@ export default async function DeckDetailPage({
     include: {
       cards: {
         orderBy: { createdAt: "asc" },
-        include: { audio: { select: { id: true } } },
+        include: {
+          audio: { select: { id: true } },
+          note: { select: { fields: true } },
+        },
       },
     },
   });
 
   if (!deck) notFound();
+
+  const columns = effectiveColumns(deck.columns);
 
   return (
     <div className="space-y-6">
@@ -42,7 +48,7 @@ export default async function DeckDetailPage({
         />
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Link
           href={`/decks/${deck.id}/import`}
           className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
@@ -50,12 +56,26 @@ export default async function DeckDetailPage({
           Import CSV
         </Link>
         {deck.cards.length > 0 && (
-          <Link
-            href={`/decks/${deck.id}/review`}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
-          >
-            Review
-          </Link>
+          <>
+            <Link
+              href={`/decks/${deck.id}/merge`}
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
+            >
+              Update cards
+            </Link>
+            <Link
+              href={`/decks/${deck.id}/review`}
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
+            >
+              Review
+            </Link>
+            <a
+              href={`/api/decks/${deck.id}/export`}
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
+            >
+              Export CSV
+            </a>
+          </>
         )}
       </div>
 
@@ -66,12 +86,14 @@ export default async function DeckDetailPage({
       ) : (
         <DeckCards
           deckId={deck.id}
+          columns={columns}
           cards={deck.cards.map((card) => ({
             id: card.id,
             front: card.front,
             back: card.back,
             category: card.category,
             hasAudio: Boolean(card.audio),
+            fields: parseFields(card.note.fields),
           }))}
         />
       )}

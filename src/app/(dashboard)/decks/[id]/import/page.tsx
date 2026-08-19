@@ -99,6 +99,7 @@ export default function ImportPage({ params }: { params: { id: string } }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        headers,
         rows,
         mapping: { front: frontIndices, back: backIndices },
         generateAudio,
