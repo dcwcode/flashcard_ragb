@@ -155,42 +155,6 @@ export function ReviewDeck({ cards }: { cards: ReviewCard[] }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between text-sm text-gray-500">
-        <span>
-          Card {index + 1} of {order.length}
-        </span>
-        <div className="flex items-center gap-4">
-          <span>{card.category !== "UNCATEGORISED" ? "Reviewing" : "New"}</span>
-          <label className="flex items-center gap-1.5 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={shuffle}
-              onChange={toggleShuffle}
-              className="h-4 w-4 rounded border-gray-300"
-            />
-            <span>Shuffle</span>
-          </label>
-          <label className="flex items-center gap-1.5 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={reverse}
-              onChange={toggleReverse}
-              className="h-4 w-4 rounded border-gray-300"
-            />
-            <span>Reverse</span>
-          </label>
-          <label className="flex items-center gap-1.5 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={listening}
-              onChange={toggleListening}
-              className="h-4 w-4 rounded border-gray-300"
-            />
-            <span>Listening mode</span>
-          </label>
-        </div>
-      </div>
-
       <div className="flex items-center justify-center min-h-12">
         {audioId ? (
           <audio
@@ -294,6 +258,42 @@ export function ReviewDeck({ cards }: { cards: ReviewCard[] }) {
           </button>
         </div>
       )}
+
+      <div className="flex items-center justify-between text-sm text-gray-500">
+        <span>
+          Card {index + 1} of {order.length}
+        </span>
+        <div className="flex items-center gap-4">
+          <span>{card.category !== "UNCATEGORISED" ? "Reviewing" : "New"}</span>
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={shuffle}
+              onChange={toggleShuffle}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            <span>Shuffle</span>
+          </label>
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={reverse}
+              onChange={toggleReverse}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            <span>Reverse</span>
+          </label>
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={listening}
+              onChange={toggleListening}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            <span>Listening mode</span>
+          </label>
+        </div>
+      </div>
     </div>
   );
 }
