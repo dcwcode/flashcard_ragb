@@ -173,7 +173,7 @@ export default function MergePage({ params }: { params: { id: string } }) {
         <Link href={`/decks/${params.id}`} className="text-sm text-gray-500 hover:underline">
           ← Back to deck
         </Link>
-        <h1 className="text-2xl font-semibold mt-2">Update cards</h1>
+        <h1 className="text-2xl font-semibold mt-2">Import CSV</h1>
         <p className="text-sm text-gray-500 mt-1">
           Upload a CSV to add new cards and update existing ones. Rows matching an
           existing card (by id, then by the front/word) are flagged for review.

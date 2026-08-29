@@ -45,6 +45,15 @@ export async function POST(
     );
   }
 
+  // Record the deck's field schema and mapping.
+  await prisma.deck.update({
+    where: { id: deck.id },
+    data: {
+      columns: JSON.stringify(headers),
+      mapping: JSON.stringify(mapping),
+    },
+  });
+
   const classification = await classifyRows(deck.id, headers, rows, mapping);
 
   let created = 0;

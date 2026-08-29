@@ -50,19 +50,13 @@ export default async function DeckDetailPage({
 
       <div className="flex flex-wrap gap-2">
         <Link
-          href={`/decks/${deck.id}/import`}
+          href={`/decks/${deck.id}/merge`}
           className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
         >
           Import CSV
         </Link>
         {deck.cards.length > 0 && (
           <>
-            <Link
-              href={`/decks/${deck.id}/merge`}
-              className="rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
-            >
-              Update cards
-            </Link>
             <Link
               href={`/decks/${deck.id}/review`}
               className="rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
@@ -81,7 +75,14 @@ export default async function DeckDetailPage({
 
       {deck.cards.length === 0 ? (
         <p className="text-gray-500">
-          No cards yet. Import a CSV to get started.
+          No cards yet.{" "}
+          <Link
+            href={`/decks/${deck.id}/merge`}
+            className="text-blue-600 hover:underline"
+          >
+            Import a CSV
+          </Link>{" "}
+          to get started.
         </p>
       ) : (
         <DeckCards
