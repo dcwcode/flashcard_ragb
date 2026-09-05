@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
-import { parseColumns, parseFields } from "@/lib/fields";
+import { parseColumns, parseFields, parseMapping } from "@/lib/fields";
 import { categoryLabel } from "@/lib/categories";
 import { toCsv } from "@/lib/csv";
 
@@ -22,6 +22,9 @@ export async function GET(
   const parsedColumns = parseColumns(deck.columns);
   const isLegacy = parsedColumns.length === 0;
   const columns = isLegacy ? ["front", "back"] : parsedColumns;
+  const mapping = parseMapping(deck.mapping);
+  const firstFrontCol = mapping.front[0];
+  const firstBackCol = mapping.back[0];
 
   const cards = await prisma.card.findMany({
     where: { deckId: deck.id },
@@ -32,9 +35,15 @@ export async function GET(
   const header = ["id", ...columns, "category"];
   const rows = cards.map((card) => {
     const fields = parseFields(card.note.fields);
-    const values = columns.map((col) =>
-      isLegacy ? (col === "front" ? card.front : card.back) : (fields[col] ?? "")
-    );
+    const hasNamedFields = Object.keys(fields).length > 0;
+    const values = columns.map((col) => {
+      if (isLegacy) return col === "front" ? card.front : card.back;
+      if (hasNamedFields) return fields[col] ?? "";
+      // Legacy card without named fields: recover from front/back.
+      if (col === firstFrontCol) return card.front;
+      if (col === firstBackCol) return card.back;
+      return "";
+    });
     return [card.id, ...values, categoryLabel(card.category)];
   });
 
