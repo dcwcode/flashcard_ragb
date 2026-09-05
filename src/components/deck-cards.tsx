@@ -27,6 +27,7 @@ export function DeckCards({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [bulkCategory, setBulkCategory] = useState("");
+  const [audioResult, setAudioResult] = useState("");
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFields, setEditFields] = useState<Record<string, string>>({});
@@ -87,6 +88,27 @@ export function DeckCards({
   function reviewSelected() {
     if (selected.size === 0) return;
     router.push(`/decks/${deckId}/review?ids=${Array.from(selected).join(",")}`);
+  }
+
+  async function generateAudioSelected() {
+    if (selected.size === 0) return;
+    setBusy(true);
+    setAudioResult("");
+    const res = await fetch(`/api/decks/${deckId}/audio`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: Array.from(selected) }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setAudioResult(
+        `Generated ${data.generated}, skipped ${data.skipped} (already had audio), failed ${data.failed}.`
+      );
+    } else {
+      setAudioResult("Audio generation failed. Please try again.");
+    }
+    setBusy(false);
+    router.refresh();
   }
 
   function startEdit(card: DeckCard) {
@@ -153,6 +175,14 @@ export function DeckCards({
             </button>
 
             <button
+              onClick={generateAudioSelected}
+              disabled={busy}
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
+            >
+              Generate audio ({selected.size})
+            </button>
+
+            <button
               onClick={deleteSelected}
               disabled={busy}
               className="rounded-md border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
@@ -162,6 +192,10 @@ export function DeckCards({
           </div>
         )}
       </div>
+
+      {audioResult && (
+        <p className="text-sm text-gray-600">{audioResult}</p>
+      )}
 
       <ul className="divide-y divide-gray-200 rounded-lg border border-gray-200">
         {cards.map((card) => (

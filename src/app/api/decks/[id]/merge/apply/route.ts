@@ -105,6 +105,8 @@ export async function POST(
   }
 
   // Regenerate audio for new/overridden words.
+  let audioGenerated = 0;
+  let audioFailed = 0;
   for (const target of audioTargets) {
     try {
       const audio = await ensureAudio(deck.id, target.front, deck.language);
@@ -120,11 +122,13 @@ export async function POST(
         if (before?.audioId && before.audioId !== audio.id) {
           await deleteAudioIfOrphaned(before.audioId);
         }
+        audioGenerated++;
       }
     } catch (error) {
       console.error("Audio generation error:", error);
+      audioFailed++;
     }
   }
 
-  return NextResponse.json({ created, updated });
+  return NextResponse.json({ created, updated, audioGenerated, audioFailed });
 }
