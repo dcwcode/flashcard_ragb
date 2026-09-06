@@ -18,10 +18,14 @@ export function DeckCards({
   deckId,
   cards,
   columns,
+  frontColumns,
+  backColumns,
 }: {
   deckId: string;
   cards: DeckCard[];
   columns: string[];
+  frontColumns: string[];
+  backColumns: string[];
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -113,11 +117,20 @@ export function DeckCards({
 
   function startEdit(card: DeckCard) {
     setEditingId(card.id);
+    const firstFront = frontColumns[0];
+    const firstBack = backColumns[0];
     const fields: Record<string, string> = {};
     for (const col of columns) {
-      fields[col] =
-        card.fields[col] ??
-        (col === "front" ? card.front : col === "back" ? card.back : "");
+      const existing = card.fields[col];
+      if (existing != null && existing.trim() !== "") {
+        fields[col] = existing;
+      } else if (col === firstFront) {
+        fields[col] = card.front;
+      } else if (col === firstBack) {
+        fields[col] = card.back;
+      } else {
+        fields[col] = "";
+      }
     }
     setEditFields(fields);
   }

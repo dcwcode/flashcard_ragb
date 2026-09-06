@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { languageLabel } from "@/lib/languages";
 import { DeckActions } from "@/components/deck-actions";
 import { DeckCards } from "@/components/deck-cards";
-import { effectiveColumns, parseFields } from "@/lib/fields";
+import { effectiveColumns, effectiveMapping, parseFields } from "@/lib/fields";
 
 export default async function DeckDetailPage({
   params,
@@ -43,6 +43,15 @@ export default async function DeckDetailPage({
   if (!deck) notFound();
 
   const columns = effectiveColumns(deck.columns);
+  const RESERVED = new Set(["id", "card_id", "cardid", "category"]);
+  const dataColumns = columns.filter((c) => !RESERVED.has(c.trim().toLowerCase()));
+  const mapping = effectiveMapping(deck.mapping, dataColumns);
+  const frontColumns = mapping.front.filter(
+    (c) => !RESERVED.has(c.trim().toLowerCase())
+  );
+  const backColumns = mapping.back.filter(
+    (c) => !RESERVED.has(c.trim().toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
@@ -132,7 +141,9 @@ export default async function DeckDetailPage({
       ) : (
         <DeckCards
           deckId={deck.id}
-          columns={columns}
+          columns={dataColumns}
+          frontColumns={frontColumns}
+          backColumns={backColumns}
           cards={deck.cards.map((card) => ({
             id: card.id,
             front: card.front,

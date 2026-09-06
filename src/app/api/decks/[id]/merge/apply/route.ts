@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { Category } from "@prisma/client";
 import { requireUser } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
-import { classifyRows, buildMapping } from "@/lib/merge";
+import { classifyRows, buildMapping, dataColumns } from "@/lib/merge";
 import { ensureAudio } from "@/lib/audio";
 import { deleteAudioIfOrphaned } from "@/lib/cards";
 
@@ -45,11 +45,12 @@ export async function POST(
     );
   }
 
-  // Record the deck's field schema and mapping.
+  // Record the deck's field schema and mapping (excluding id/category).
+  const columns = dataColumns(headers);
   await prisma.deck.update({
     where: { id: deck.id },
     data: {
-      columns: JSON.stringify(headers),
+      columns: JSON.stringify(columns),
       mapping: JSON.stringify(mapping),
     },
   });
