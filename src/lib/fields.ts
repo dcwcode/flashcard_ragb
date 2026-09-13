@@ -61,10 +61,13 @@ export function deriveFrontBack(
   fields: FieldMap,
   mapping: DeckMapping
 ): { front: string; back: string } {
-  const join = (names: string[]) =>
+  const join = (names: string[], separator: string) =>
     names
       .map((n) => (fields[n] ?? "").trim())
       .filter((v) => v.length > 0)
-      .join(" ");
-  return { front: join(mapping.front), back: join(mapping.back) };
+      .join(separator);
+  return {
+    front: join(mapping.front, " "),
+    back: join(mapping.back, "\n"),
+  };
 }

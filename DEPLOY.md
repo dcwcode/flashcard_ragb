@@ -40,6 +40,7 @@ Open the service → **Variables** and add:
 | `DATABASE_URL` | `file:/data/db/production.db` |
 | `NEXTAUTH_URL` | `https://<your-app>.up.railway.app` |
 | `NEXTAUTH_SECRET` | a long random string (see below) |
+| `DEEPSEEK_API_KEY` | DeepSeek API key (for word definitions & sentences) |
 
 Generate a secret locally with:
 

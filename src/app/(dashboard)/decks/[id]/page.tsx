@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { languageLabel } from "@/lib/languages";
 import { DeckActions } from "@/components/deck-actions";
 import { DeckCards } from "@/components/deck-cards";
+import { AddWords } from "@/components/add-words";
 import { effectiveColumns, parseFields } from "@/lib/fields";
 
 export default async function DeckDetailPage({
@@ -72,6 +73,11 @@ export default async function DeckDetailPage({
           </>
         )}
       </div>
+
+      <AddWords
+        deckId={deck.id}
+        existingFronts={deck.cards.map((card) => card.front)}
+      />
 
       {deck.cards.length === 0 ? (
         <p className="text-gray-500">
