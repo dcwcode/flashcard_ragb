@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { Category } from "@prisma/client";
 import { requireUser } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
-import { classifyRows, buildMapping } from "@/lib/merge";
+import { classifyRows, buildMapping, dataColumns } from "@/lib/merge";
 import { ensureAudio } from "@/lib/audio";
 import { deleteAudioIfOrphaned } from "@/lib/cards";
 
@@ -45,11 +45,12 @@ export async function POST(
     );
   }
 
-  // Record the deck's field schema and mapping.
+  // Record the deck's field schema and mapping (excluding id/category).
+  const columns = dataColumns(headers);
   await prisma.deck.update({
     where: { id: deck.id },
     data: {
-      columns: JSON.stringify(headers),
+      columns: JSON.stringify(columns),
       mapping: JSON.stringify(mapping),
     },
   });
@@ -105,6 +106,8 @@ export async function POST(
   }
 
   // Regenerate audio for new/overridden words.
+  let audioGenerated = 0;
+  let audioFailed = 0;
   for (const target of audioTargets) {
     try {
       const audio = await ensureAudio(deck.id, target.front, deck.language);
@@ -120,11 +123,13 @@ export async function POST(
         if (before?.audioId && before.audioId !== audio.id) {
           await deleteAudioIfOrphaned(before.audioId);
         }
+        audioGenerated++;
       }
     } catch (error) {
       console.error("Audio generation error:", error);
+      audioFailed++;
     }
   }
 
-  return NextResponse.json({ created, updated });
+  return NextResponse.json({ created, updated, audioGenerated, audioFailed });
 }

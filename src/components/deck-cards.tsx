@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CategoryBadge } from "@/components/category-badge";
 import { CATEGORIES, CategoryValue } from "@/lib/categories";
@@ -14,22 +14,70 @@ export interface DeckCard {
   fields: Record<string, string>;
 }
 
+const CATEGORY_ORDER: string[] = CATEGORIES.map((c) => c.value);
+
 export function DeckCards({
   deckId,
   cards,
   columns,
+  frontColumns,
+  backColumns,
 }: {
   deckId: string;
   cards: DeckCard[];
   columns: string[];
+  frontColumns: string[];
+  backColumns: string[];
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [bulkCategory, setBulkCategory] = useState("");
+  const [audioResult, setAudioResult] = useState("");
+  const [sort, setSort] = useState("oldest");
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFields, setEditFields] = useState<Record<string, string>>({});
+
+  const sortedCards = useMemo(() => {
+    const sorted = [...cards];
+    const cmp = (a: string, b: string) =>
+      a.localeCompare(b, undefined, { sensitivity: "base" });
+    switch (sort) {
+      case "newest":
+        sorted.reverse();
+        break;
+      case "front-asc":
+        sorted.sort((a, b) => cmp(a.front, b.front));
+        break;
+      case "front-desc":
+        sorted.sort((a, b) => cmp(b.front, a.front));
+        break;
+      case "back-asc":
+        sorted.sort((a, b) => cmp(a.back, b.back));
+        break;
+      case "back-desc":
+        sorted.sort((a, b) => cmp(b.back, a.back));
+        break;
+      case "category":
+        sorted.sort(
+          (a, b) =>
+            (CATEGORY_ORDER.indexOf(a.category) + 1 || 999) -
+            (CATEGORY_ORDER.indexOf(b.category) + 1 || 999)
+        );
+        break;
+      case "category-desc":
+        sorted.sort(
+          (a, b) =>
+            (CATEGORY_ORDER.indexOf(b.category) + 1 || 999) -
+            (CATEGORY_ORDER.indexOf(a.category) + 1 || 999)
+        );
+        break;
+      default:
+        break;
+    }
+    return sorted;
+  }, [cards, sort]);
 
   const allSelected = cards.length > 0 && selected.size === cards.length;
 
@@ -89,13 +137,43 @@ export function DeckCards({
     router.push(`/decks/${deckId}/review?ids=${Array.from(selected).join(",")}`);
   }
 
+  async function generateAudioSelected() {
+    if (selected.size === 0) return;
+    setBusy(true);
+    setAudioResult("");
+    const res = await fetch(`/api/decks/${deckId}/audio`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: Array.from(selected) }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setAudioResult(
+        `Generated ${data.generated}, skipped ${data.skipped} (already had audio), failed ${data.failed}.`
+      );
+    } else {
+      setAudioResult("Audio generation failed. Please try again.");
+    }
+    setBusy(false);
+    router.refresh();
+  }
+
   function startEdit(card: DeckCard) {
     setEditingId(card.id);
+    const firstFront = frontColumns[0];
+    const firstBack = backColumns[0];
     const fields: Record<string, string> = {};
     for (const col of columns) {
-      fields[col] =
-        card.fields[col] ??
-        (col === "front" ? card.front : col === "back" ? card.back : "");
+      const existing = card.fields[col];
+      if (existing != null && existing.trim() !== "") {
+        fields[col] = existing;
+      } else if (col === firstFront) {
+        fields[col] = card.front;
+      } else if (col === firstBack) {
+        fields[col] = card.back;
+      } else {
+        fields[col] = "";
+      }
     }
     setEditFields(fields);
   }
@@ -125,6 +203,21 @@ export function DeckCards({
           Select all
         </label>
 
+        <select
+          value={sort}
+          onChange={(e) => setSort(e.target.value)}
+          className="rounded-md border border-gray-300 px-2 py-1.5 text-sm text-gray-700"
+        >
+          <option value="oldest">Oldest first</option>
+          <option value="newest">Newest first</option>
+          <option value="front-asc">Front (A → Z)</option>
+          <option value="front-desc">Front (Z → A)</option>
+          <option value="back-asc">Back (A → Z)</option>
+          <option value="back-desc">Back (Z → A)</option>
+          <option value="category">Category</option>
+          <option value="category-desc">Category (reverse)</option>
+        </select>
+
         {selected.size > 0 && (
           <div className="flex flex-wrap items-center gap-2">
             <select
@@ -153,6 +246,14 @@ export function DeckCards({
             </button>
 
             <button
+              onClick={generateAudioSelected}
+              disabled={busy}
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
+            >
+              Generate audio ({selected.size})
+            </button>
+
+            <button
               onClick={deleteSelected}
               disabled={busy}
               className="rounded-md border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
@@ -163,8 +264,12 @@ export function DeckCards({
         )}
       </div>
 
+      {audioResult && (
+        <p className="text-sm text-gray-600">{audioResult}</p>
+      )}
+
       <ul className="divide-y divide-gray-200 rounded-lg border border-gray-200">
-        {cards.map((card) => (
+        {sortedCards.map((card) => (
           <li key={card.id} className="px-4 py-3">
             {editingId === card.id ? (
               <div className="space-y-2">

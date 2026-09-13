@@ -6,15 +6,27 @@ import { languageLabel } from "@/lib/languages";
 import { DeckActions } from "@/components/deck-actions";
 import { DeckCards } from "@/components/deck-cards";
 import { AddWords } from "@/components/add-words";
-import { effectiveColumns, parseFields } from "@/lib/fields";
+import { effectiveColumns, effectiveMapping, parseFields } from "@/lib/fields";
 
 export default async function DeckDetailPage({
   params,
+  searchParams,
 }: {
   params: { id: string };
+  searchParams: {
+    merged?: string;
+    created?: string;
+    audioGenerated?: string;
+    audioFailed?: string;
+  };
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+
+  const createdCount = Number(searchParams.created ?? 0);
+  const updatedCount = Number(searchParams.merged ?? 0);
+  const audioGenerated = Number(searchParams.audioGenerated ?? 0);
+  const audioFailed = Number(searchParams.audioFailed ?? 0);
 
   const deck = await prisma.deck.findFirst({
     where: { id: params.id, userId: user.id },
@@ -32,6 +44,15 @@ export default async function DeckDetailPage({
   if (!deck) notFound();
 
   const columns = effectiveColumns(deck.columns);
+  const RESERVED = new Set(["id", "card_id", "cardid", "category"]);
+  const dataColumns = columns.filter((c) => !RESERVED.has(c.trim().toLowerCase()));
+  const mapping = effectiveMapping(deck.mapping, dataColumns);
+  const frontColumns = mapping.front.filter(
+    (c) => !RESERVED.has(c.trim().toLowerCase())
+  );
+  const backColumns = mapping.back.filter(
+    (c) => !RESERVED.has(c.trim().toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
@@ -79,6 +100,39 @@ export default async function DeckDetailPage({
         existingFronts={deck.cards.map((card) => card.front)}
       />
 
+      {(createdCount > 0 || updatedCount > 0) && (
+        <div className="rounded-md border border-gray-200 bg-gray-50 px-4 py-3 text-sm">
+          <p className="text-gray-700">
+            {createdCount > 0 && (
+              <>
+                Imported {createdCount} new card{createdCount === 1 ? "" : "s"}
+              </>
+            )}
+            {createdCount > 0 && updatedCount > 0 && " · "}
+            {updatedCount > 0 && (
+              <>
+                Updated {updatedCount} card{updatedCount === 1 ? "" : "s"}
+              </>
+            )}
+            .
+          </p>
+          {audioFailed > 0 ? (
+            <p className="text-amber-700 mt-1">
+              Audio generation failed for {audioFailed} card
+              {audioFailed === 1 ? "" : "s"}. Select them and use “Generate
+              audio” to retry.
+            </p>
+          ) : (
+            audioGenerated > 0 && (
+              <p className="text-gray-600 mt-1">
+                Audio generated for {audioGenerated} card
+                {audioGenerated === 1 ? "" : "s"}.
+              </p>
+            )
+          )}
+        </div>
+      )}
+
       {deck.cards.length === 0 ? (
         <p className="text-gray-500">
           No cards yet.{" "}
@@ -93,7 +147,9 @@ export default async function DeckDetailPage({
       ) : (
         <DeckCards
           deckId={deck.id}
-          columns={columns}
+          columns={dataColumns}
+          frontColumns={frontColumns}
+          backColumns={backColumns}
           cards={deck.cards.map((card) => ({
             id: card.id,
             front: card.front,

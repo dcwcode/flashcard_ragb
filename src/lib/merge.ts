@@ -41,6 +41,13 @@ export function detectCategoryColumn(headers: string[]): number | null {
   return idx === -1 ? null : idx;
 }
 
+// Header names excluding the reserved id/category columns.
+export function dataColumns(headers: string[]): string[] {
+  const idIdx = detectIdColumn(headers);
+  const catIdx = detectCategoryColumn(headers);
+  return headers.filter((_, i) => i !== idIdx && i !== catIdx);
+}
+
 export function buildMapping(
   headers: string[],
   frontIdx: number[],
@@ -76,6 +83,7 @@ export async function classifyRows(
   for (const row of rows) {
     const fields: FieldMap = {};
     headers.forEach((h, i) => {
+      if (i === idColumnIndex || i === categoryColumnIndex) return;
       fields[h] = row[i] ?? "";
     });
 

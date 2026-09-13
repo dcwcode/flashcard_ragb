@@ -163,7 +163,9 @@ export default function MergePage({ params }: { params: { id: string } }) {
     }
 
     const data = await res.json();
-    router.push(`/decks/${params.id}?merged=${data.updated}&created=${data.created}`);
+    router.push(
+      `/decks/${params.id}?merged=${data.updated}&created=${data.created}&audioGenerated=${data.audioGenerated ?? 0}&audioFailed=${data.audioFailed ?? 0}`
+    );
     router.refresh();
   }
 
